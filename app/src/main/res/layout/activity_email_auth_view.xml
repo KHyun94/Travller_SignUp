@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="emailVM"
+            type="com.example.travller_signup.viewmodels.EmailAuthViewModel" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="40dp"
+            android:background="@drawable/border_square"
+            android:orientation="horizontal"
+            android:weightSum="100">
+
+            <EditText
+                android:id="@+id/emailAuth_number"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="90"
+                android:background="@android:color/transparent"
+                android:text="@{emailVM.authLD"
+                android:hint="인증 번호를 등록해 주세요"
+                android:paddingLeft="10dp"
+                android:textSize="15dp" />
+
+            <TextView
+                android:id="@+id/emailAuth_time_counter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="10"
+                android:text="@{emailVM.timerLD}"
+                android:textSize="15dp" />
+
+        </LinearLayout>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="40dp"
+            android:text="@{emailVM.resultLD}"
+            android:textColor="@android:color/black" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="100">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="20"/>
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginVertical="30dp"
+                android:layout_weight="27"
+                android:text="OK"
+                android:textSize="22dp"
+                android:onClick="@{()->emailVM.onOKClicked()}"
+                android:background="@drawable/custom_btn"/>
+
+            <view
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginVertical="30dp"
+                android:layout_weight="27"
+                android:text="CANCEL"
+                android:textSize="22dp"
+                android:onClick="@{()->emailVM.onCANCELClicked()}"
+                android:background="@drawable/custom_btn"/>
+
+            <view
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="20"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+</layout>
