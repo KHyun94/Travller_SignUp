@@ -2,6 +2,7 @@ package com.example.travller_signup.views;
 
 import android.arch.lifecycle.Observer;
 import android.content.Intent;
+import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Build;
@@ -14,7 +15,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.example.travller_signup.R;
-import com.example.travller_signup.bindingadapter.DataBindingAdapters;
 import com.example.travller_signup.databinding.ActivitySignUpBinding;
 import com.example.travller_signup.viewmodels.SignUpViewModel;
 
@@ -22,7 +22,7 @@ import java.io.File;
 
 public class SignUpView extends AppCompatActivity {
 
-    String TAG = "TAG";
+    String TAG = "TAG.View.";
 
     Uri uriPath;
     String absolutePath;
@@ -70,10 +70,6 @@ public class SignUpView extends AppCompatActivity {
                             startActivityForResult(cameraIntent, 1);
                         }
                     }
-                } else if (integer == 2) {
-                    Intent emailIntent = new Intent(getApplicationContext(), EmailAuthView.class);
-                    emailIntent.putExtra("email", svm.emailLD.getValue());
-                    startActivityForResult(emailIntent, 2);
                 }
 
             }
@@ -101,6 +97,19 @@ public class SignUpView extends AppCompatActivity {
         return imgFilePath;
     }
 
+    //이미지 보안 주소를 실제 주소로 바꿔주는 함수
+    private Uri getGalleryImageFullPath(Uri uri) {
+        String[] filePathColumn = {MediaStore.Images.Media.DATA};
+        Cursor cursor = getContentResolver().query(uri, filePathColumn, null, null, null);
+        cursor.moveToFirst();
+
+        int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+        String picturePath = cursor.getString(columnIndex);
+        cursor.close();
+
+        return Uri.fromFile(new File(picturePath));
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -109,7 +118,8 @@ public class SignUpView extends AppCompatActivity {
             case 0:
                 try {
                     Uri tmpUri = data.getData();
-                    svm.photoUpdate.setValue(tmpUri.toString());
+                    svm.photoUpdate.setValue(getGalleryImageFullPath(tmpUri).toString());
+                    Log.d(TAG +"앨범", "앨범이미지 주소: " + svm.photoUpdate.getValue());
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -123,6 +133,8 @@ public class SignUpView extends AppCompatActivity {
                     sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE).setData(uriPath));
 
                     svm.photoUpdate.setValue(uriPath.toString());
+
+                    Log.d(TAG +"카메라", "카메라 이미지 주소: " + svm.photoUpdate.getValue());
 
                 } catch (Exception e) {
                     e.printStackTrace();

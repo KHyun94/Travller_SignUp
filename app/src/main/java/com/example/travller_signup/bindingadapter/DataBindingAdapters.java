@@ -2,6 +2,9 @@ package com.example.travller_signup.bindingadapter;
 
 import android.databinding.BindingAdapter;
 import android.net.Uri;
+import android.view.KeyEvent;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
@@ -22,5 +25,4 @@ public class DataBindingAdapters {
                 .apply(options)
                 .into(iv);
     }
-
 }

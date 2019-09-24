@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.arch.lifecycle.MutableLiveData;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.databinding.BaseObservable;
 import android.net.Uri;
 import android.provider.Settings;
@@ -18,7 +17,6 @@ import com.example.travller_signup.R;
 import com.example.travller_signup.models.UserSignup;
 import com.example.travller_signup.remote.RetrofitCon;
 import com.example.travller_signup.setting.Setting_permissionCheck;
-import com.example.travller_signup.views.EmailAuthView;
 import com.gun0912.tedpermission.PermissionListener;
 
 import java.io.File;
@@ -27,6 +25,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -46,17 +47,35 @@ public class SignUpViewModel extends BaseObservable {
 
     public MutableLiveData<String> photoUpdate = new MutableLiveData<>();
 
+
+    //*********레트로핏//아이피와 포트 적기
+    final RetrofitCon con = new RetrofitCon("http://IP:PORT");
+
+    //회원가입 Call
+    Call<Void> su_call;
+
+    //프로필 이미지 업로드RequestBody
+    MultipartBody.Part imgBody;
+
+    //회원 데이터 객체
+    UserSignup userSignup;
+
     //이메일 인증을 하면 true 값으로 반환, 지금은 이메일 인증을 연결 안해두어서 true 값
     public boolean isAuth = true;
 
-    String TAG = "TAG";
+    String TAG = "TAG.SignUp.";
 
     public SignUpViewModel(Context context) {
         this.context = context;
-        emailAuth.setValue("미인증");
+        emailAuth.setValue("인증");
 
         String imageUri = "drawable://" + R.drawable.p_blank_person;
         photoUpdate.setValue(imageUri);
+
+        nickNameLD.setValue("닉네임");
+        emailLD.setValue("example@naver.com");
+        passwordLD.setValue("1q2w3e4r!");
+
 
     }
 
@@ -90,17 +109,15 @@ public class SignUpViewModel extends BaseObservable {
     //이메일 인증 버튼
     public void onEmailAuthClicked() {
         if (TextUtils.isEmpty(emailLD.getValue())) {
-            sendToast(context, "System::Email == null");
+            sendToast(context, "이메일 칸이 비었습니다.");
         } else if (!isEmailValid()) {
-            sendToast(context, "System::Email 정규식 Error");
+            sendToast(context, "이메일 형식이 틀렸습니다.\n형식에 맞추어 작성부탁드립니다.");
         } else {
             sendToast(context, "System::Email Clear");
 
-            buttonClickResult.setValue(2);
+            //       buttonClickResult.setValue(2);
 
             //(예정) 여기서 이메일 인증 처리
-            isAuth = true;
-            emailAuth.setValue("인증");
         }
     }
 
@@ -109,72 +126,82 @@ public class SignUpViewModel extends BaseObservable {
 
         //각각의 입력 값을 정규식이 맞는지 null이 아닌지 체크
         if (TextUtils.isEmpty(nickNameLD.getValue())) {
-            sendToast(context, "System::NickName == null");
+            sendToast(context, "닉네임 칸이 비었습니다.");
         } else if (!isNickValid()) {
             nickNameLD.setValue("");
-            sendToast(context, "System::NickName 정규식 Error");
+            sendToast(context, "닉네임 형식이 틀렸습니다.\n닉네임 형식에 맞추어 작성해주십시오.");
         } else if (TextUtils.isEmpty(emailLD.getValue())) {
-            sendToast(context, "System::Email == null");
+            sendToast(context, "이메일 칸이 비었습니다.");
         } else if (!isEmailValid()) {
             emailLD.setValue("");
-            sendToast(context, "System::Email 정규식 Error");
+            sendToast(context, "이메일 형식이 틀렸습니다.\n형식에 맞추어 작성부탁드립니다.");
         } else if (TextUtils.isEmpty(passwordLD.getValue())) {
-            sendToast(context, "System::Password == null");
+            sendToast(context, "패스워드 칸이 비었습니다.");
         } else if (!isPasswordValid()) {
             passwordLD.setValue("");
-            sendToast(context, "System::Password 정규식 Error");
+            sendToast(context, "패스워드 형식이 틀렸습니다.\n형식에 맞추어 작성부탁드립니다.");
         } else if (!isAuth) {
-            sendToast(context, "System::Email 미인증");
+            sendToast(context, "이메일 인증이 미실시되었습니다.");
         } else {
             //모든 조건에 만족할 시 실행
             sendToast(context, "System::All Clear");
 
-            UserSignup userSignup;
+            //이메일, 닉네임, 패스워드를 담은 객체
+            userSignup = new UserSignup(emailLD.getValue(), returnSHA256(passwordLD.getValue()), nickNameLD.getValue(), getDeviceID());
 
             //프로필 이미지가 null이거나 초기값 사진 또는 에러 이미지일 때
             if (photoUpdate.getValue() == null || photoUpdate.getValue().equals("drawable://" + R.drawable.p_blank_person)) {
 
-                userSignup = new UserSignup(emailLD.getValue(), returnSHA256(passwordLD.getValue()), nickNameLD.getValue(), getDeviceID(), null);
+                Log.d(TAG + "이미지", "존재하지 않음");
+                imgBody = null;
 
-                Log.d(TAG, "1. onSignUpClicked: " + userSignup.toString());
-            }
-            else {
+            } else {
                 //프로필 이미지가 null이거나 초기값 사진 또는 에러 이미지일 때가 아닐때
+
                 File imgFile = new File((Uri.parse(photoUpdate.getValue().toString())).getPath());
-                userSignup = new UserSignup(emailLD.getValue(), returnSHA256(passwordLD.getValue()), nickNameLD.getValue(), getDeviceID(), imgFile);
 
-                Log.d(TAG, "2. onSignUpClicked: " + userSignup.toString());
+
+                Log.d(TAG + "이미지", "존재함: " + imgFile.getAbsolutePath());
+
+
+                //취사선택
+
+                //******multipart/form-data는 파일 형식의 파싱법
+                RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), imgFile);
+                imgBody = MultipartBody.Part.createFormData("us_profile_img", imgFile.getName(), requestFile);
+
+                //*****이미지 형식의 파싱법(image/*은 모든 이미지 형식이라는 뜻)
+//              RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), imgFile);
+//              imgBody = MultipartBody.Part.createFormData("us_profile_img", imgFile.getName(), requestFile);
             }
 
-            String IP = "";
+            /*
+            RetrofitService.java에서 번호와 밑의 번호에 맞춰서 하면 됨
+            1.은 객체와 이미지
+            2.은 각 변수와 이미지
+             */
 
-            if(userSignup != null){
+            //1. 객체 + 이미지
+//          su_call = con.retrofitService.goSignUp(userSignup, imgBody);
 
-                final RetrofitCon con = new RetrofitCon(IP);
-                Call<Boolean> su_call = con.retrofitService.goSignUp(userSignup);
+            //2. 각 변수(이메일, 패스워드(해시) + 닉네임 + 디바이스 번호) + 이미지
+            su_call = con.retrofitService.goSignUp(userSignup.getUs_email(),
+                    userSignup.getUs_pwd(), userSignup.getUs_nick_name(),
+                    userSignup.getUs_device(), imgBody);
 
-                su_call.enqueue(new Callback<Boolean>() {
-                    @Override
-                    public void onResponse(Call<Boolean> call, Response<Boolean> response) {
-                        boolean getValue = response.body();
+            su_call.enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    Log.d(TAG + "통신 성공", "성공적으로 전송");
+                }
 
-                        if(getValue){
-                            sendToast(context, "회원가입 축하드립니다.");
-                            //회원가입 성공, 로그인 화면으로 돌아간다.
-                        }else{
-                            sendToast(context,"회원가입 실패: 이유 - ");
-                            //회원가입 실패
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<Boolean> call, Throwable t) {
-                        sendToast(context, "통신 불량");
-                        t.printStackTrace();
-                    }
-                });
-            }
-
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    sendToast(context, "통신 불량");
+                    Log.d(TAG + "통신 실패", "틀린 이유: " + t.getMessage());
+                    t.printStackTrace();
+                }
+            });
         }
     }
 
@@ -193,12 +220,14 @@ public class SignUpViewModel extends BaseObservable {
                         .setNegativeButton("앨범", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                Log.d(TAG + "앨범/카메라", "앨범 선택");
                                 buttonClickResult.setValue(0);
                             }
                         })
                         .setPositiveButton("카메라", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                Log.d(TAG + "앨범/카메라", "카메라 선택");
                                 buttonClickResult.setValue(1);
                             }
                         })
@@ -240,6 +269,8 @@ public class SignUpViewModel extends BaseObservable {
 
         return SHA;
     }
+
+
 
 
 }
